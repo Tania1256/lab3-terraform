@@ -7,32 +7,32 @@ apt-get install -y apache2
 
 systemctl stop apache2
 
-sed -i 's/Listen 80/Listen /' /etc/apache2/ports.conf
+sed -i "s/Listen 80/Listen ${web_port}/" /etc/apache2/ports.conf
 
-mkdir -p 
+mkdir -p ${doc_root}
 
-cat > /index.html << 'HTMLEOF'
+cat > ${doc_root}/index.html << HTMLEOF
 <!DOCTYPE html>
 <html>
 <head><title>Lab3 - Variant 09</title></head>
 <body>
   <h1>Hello from GCP!</h1>
-  <p>Server: </p>
-  <p>Port: </p>
-  <p>DocRoot: </p>
+  <p>Server: ${server_name}</p>
+  <p>Port: ${web_port}</p>
+  <p>DocRoot: ${doc_root}</p>
 </body>
 </html>
 HTMLEOF
 
-chown -R www-data:www-data 
-chmod -R 755 
+chown -R www-data:www-data ${doc_root}
+chmod -R 755 ${doc_root}
 
-cat > /etc/apache2/sites-available/lab3.conf << 'APACHEEOF'
-<VirtualHost *:>
-    ServerName 
-    DocumentRoot 
+cat > /etc/apache2/sites-available/lab3.conf << APACHEEOF
+<VirtualHost *:${web_port}>
+    ServerName ${server_name}
+    DocumentRoot ${doc_root}
 
-    <Directory >
+    <Directory ${doc_root}>
         Options Indexes FollowSymLinks
         AllowOverride None
         Require all granted
@@ -46,7 +46,7 @@ APACHEEOF
 a2dissite 000-default.conf
 a2ensite lab3.conf
 
-echo "ServerName " >> /etc/apache2/apache2.conf
+echo "ServerName ${server_name}" >> /etc/apache2/apache2.conf
 
 systemctl start apache2
 systemctl enable apache2
