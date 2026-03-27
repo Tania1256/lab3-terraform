@@ -12,18 +12,14 @@ locals {
   }
 }
 
-# -----------------------------------------
 # VPC Network
-# -----------------------------------------
 resource "google_compute_network" "vpc" {
   name                    = var.network_name
   auto_create_subnetworks = false
   project                 = var.project_id
 }
 
-# -----------------------------------------
 # Subnetworks
-# -----------------------------------------
 resource "google_compute_subnetwork" "subnet_a" {
   name          = var.subnet_a_name
   ip_cidr_range = var.subnet_a_cidr
@@ -40,9 +36,7 @@ resource "google_compute_subnetwork" "subnet_b" {
   project       = var.project_id
 }
 
-# -----------------------------------------
 # Cloud Router + NAT
-# -----------------------------------------
 resource "google_compute_router" "router" {
   name    = "router-lab3-${var.variant_num}"
   region  = var.region
@@ -59,9 +53,7 @@ resource "google_compute_router_nat" "nat" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-# -----------------------------------------
 # Firewall Rules
-# -----------------------------------------
 resource "google_compute_firewall" "allow_ssh" {
   name    = "fw-allow-ssh-${var.variant_num}"
   network = google_compute_network.vpc.name
@@ -90,17 +82,13 @@ resource "google_compute_firewall" "allow_web" {
   target_tags   = ["lab3-vm-${var.variant_num}"]
 }
 
-# -----------------------------------------
 # Пошук образу Ubuntu
-# -----------------------------------------
 data "google_compute_image" "ubuntu" {
   family  = "ubuntu-2404-lts-amd64"
   project = "ubuntu-os-cloud"
 }
 
-# -----------------------------------------
 # VM Instance
-# -----------------------------------------
 resource "google_compute_instance" "vm" {
   name         = var.vm_name
   machine_type = "e2-micro"
@@ -132,6 +120,5 @@ resource "google_compute_instance" "vm" {
     })
   }
 
-  # Важливо: VM має створюватися після того, як NAT буде готовий до роботи
   depends_on = [google_compute_router_nat.nat]
 }
