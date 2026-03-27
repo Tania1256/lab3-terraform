@@ -41,7 +41,7 @@ resource "google_compute_subnetwork" "subnet_b" {
 }
 
 # -----------------------------------------
-# Cloud Router + NAT (маршрутизація в інтернет)
+# Cloud Router + NAT
 # -----------------------------------------
 resource "google_compute_router" "router" {
   name    = "router-lab3-${var.variant_num}"
@@ -60,7 +60,7 @@ resource "google_compute_router_nat" "nat" {
 }
 
 # -----------------------------------------
-# Firewall Rules (Security Group)
+# Firewall Rules
 # -----------------------------------------
 resource "google_compute_firewall" "allow_ssh" {
   name    = "fw-allow-ssh-${var.variant_num}"
@@ -74,8 +74,6 @@ resource "google_compute_firewall" "allow_ssh" {
 
   source_ranges = ["0.0.0.0/0"]
   target_tags   = ["lab3-vm-${var.variant_num}"]
-
-  description = "Allow SSH access"
 }
 
 resource "google_compute_firewall" "allow_web" {
@@ -90,12 +88,10 @@ resource "google_compute_firewall" "allow_web" {
 
   source_ranges = ["0.0.0.0/0"]
   target_tags   = ["lab3-vm-${var.variant_num}"]
-
-  description = "Allow web traffic on port ${var.web_port}"
 }
 
 # -----------------------------------------
-# Динамічний пошук образу Ubuntu 24.04 LTS
+# Пошук образу Ubuntu
 # -----------------------------------------
 data "google_compute_image" "ubuntu" {
   family  = "ubuntu-2404-lts-amd64"
@@ -108,7 +104,7 @@ data "google_compute_image" "ubuntu" {
 resource "google_compute_instance" "vm" {
   name         = var.vm_name
   machine_type = "e2-micro"
-  zone         = var.zone_a
+  zone         = var.zone_b
   project      = var.project_id
 
   tags   = ["lab3-vm-${var.variant_num}"]
@@ -122,19 +118,20 @@ resource "google_compute_instance" "vm" {
 
   network_interface {
     subnetwork = google_compute_subnetwork.subnet_a.id
-
     access_config {
-      # Публічна IP-адреса
+      # Наявність цього блоку створює External IP
     }
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/id_rsa.pub")}"
+    ssh-keys       = "ubuntu:${file("~/.ssh/id_rsa.pub")}"
+    startup-script = templatefile("${path.module}/bootstrap.sh", {
+      web_port    = var.web_port
+      server_name = var.server_name
+      doc_root    = var.doc_root
+    })
   }
 
-  metadata_startup_script = templatefile("${path.module}/bootstrap.sh", {
-    web_port    = var.web_port
-    server_name = var.server_name
-    doc_root    = var.doc_root
-  })
+  # Важливо: VM має створюватися після того, як NAT буде готовий до роботи
+  depends_on = [google_compute_router_nat.nat]
 }
